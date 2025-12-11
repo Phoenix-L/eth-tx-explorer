@@ -1,0 +1,7 @@
+# Add your dependencies here
+
+click
+python-dotenv
+web3
+pytest
+
