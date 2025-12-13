@@ -21,7 +21,6 @@ A tool for exploring Ethereum transactions.
 
 ## Usage
 
-TODO: Add usage instructions
-
+12/13: This is clone from github.com
 
 
