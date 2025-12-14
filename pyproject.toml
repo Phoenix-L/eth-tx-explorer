@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eth-tx-explorer"
+version = "0.1.0"
+description = "A Python CLI tool to explore Ethereum transactions and blocks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+authors = [
+  { name = "Hai Tian" }
+]
+
+dependencies = [
+  "click>=8.1",
+  "web3>=6.0"
+]
+
+[project.scripts]
+eth-tx-explorer = "eth_tx_explorer.cli:cli"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

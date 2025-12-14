@@ -4,4 +4,3 @@ click
 python-dotenv
 web3
 pytest
-
