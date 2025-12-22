@@ -12,6 +12,50 @@ def cli() -> None:
 def hello() -> None:
     """Sanity check command."""
     click.echo("eth-tx-explorer: hello!")
+    
+
+def fetch_block_info(w3, block_number: int):
+    """
+    Fetch a block and return (block, timestamp_utc).
+    """
+    blk = w3.eth.get_block(block_number)
+    ts = datetime.utcfromtimestamp(blk.timestamp)
+    return blk, ts
+
+def fetch_tx_info(w3, tx_hash):
+    """
+    Fetch transaction, receipt, block, and timestamp.
+    """
+    tx = w3.eth.get_transaction(tx_hash)
+    receipt = w3.eth.get_transaction_receipt(tx_hash)
+    blk = w3.eth.get_block(tx.blockNumber)
+    ts = datetime.utcfromtimestamp(blk.timestamp)
+
+    return tx, receipt, blk, ts
+
+
+def format_tx_info(w3, tx, receipt, blk, ts):
+    value_eth = w3.from_wei(tx.value, "ether")
+    gas_fee_eth = w3.from_wei(
+        receipt.gasUsed * receipt.effectiveGasPrice,
+        "ether"
+    )
+
+    lines = [
+        f"Transaction: {tx.hash}",
+        f"From: {tx['from']}",
+        f"To: {tx.to}",
+        f"Value: {value_eth} ETH",
+        f"Gas used: {receipt.gasUsed}",
+        f"Fee: {gas_fee_eth} ETH",
+        f"Status: {'SUCCESS' if receipt.status == 1 else 'REVERTED'}",
+        f"Block: {tx.blockNumber}",
+        f"Timestamp (UTC): {ts}",
+    ]
+
+    return lines
+
+
 
 @cli.command()
 @click.argument("tx_hash", required=False)
@@ -30,9 +74,7 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
     w3 = get_web3()
 
     if block is not None:
-        blk = w3.eth.get_block(block)
-
-        ts = datetime.utcfromtimestamp(blk.timestamp)
+        blk, ts = fetch_block_info(w3, block)
 
         click.echo(f"Block: {blk.number}")
         click.echo(f"Timestamp (UTC): {ts}")
@@ -40,54 +82,26 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
 
         return
 
+
     if tx_hash:
-        tx = w3.eth.get_transaction(tx_hash)
+        tx, receipt, blk, ts = fetch_tx_info(w3, tx_hash)
 
-        blk = w3.eth.get_block(tx.blockNumber)
+        lines = format_tx_info(w3, tx, receipt, blk, ts)
+        for line in lines:
+            click.echo(line)
      
-        receipt = w3.eth.get_transaction_receipt(tx_hash)
-        value_eth = w3.from_wei(tx.value, "ether")
-        gas_fee_eth = w3.from_wei(
-            receipt.gasUsed * receipt.effectiveGasPrice,
-            "ether"
-        )
-
-        ts = datetime.utcfromtimestamp(blk.timestamp)
-
-        click.echo(f"Transaction: {tx_hash}")
-        click.echo(f"From: {tx['from']}")
-        click.echo(f"To: {tx.to}")
-        click.echo(f"Value: {value_eth} ETH")
-        click.echo(f"Gas used: {receipt.gasUsed}")
-        click.echo(f"Fee: {gas_fee_eth} ETH")
-        click.echo(f"Status: {'SUCCESS' if receipt.status == 1 else 'REVERTED'}")
-        click.echo(f"Block: {tx.blockNumber}")
-        click.echo(f"Timestamp (UTC): {ts}")
-  
-    elif tx_hash==None:
+    elif tx_hash is None:
         block = w3.eth.get_block("latest", full_transactions=True)
         click.echo(f"Block {block.number} has {len(block.transactions)} txs")
+        
         for tx in block.transactions:
-            blk = w3.eth.get_block(tx.blockNumber)
-     
+            blk = w3.eth.get_block(tx.blockNumber)    
             receipt = w3.eth.get_transaction_receipt(tx.hash)
-            value_eth = w3.from_wei(tx.value, "ether")
-            gas_fee_eth = w3.from_wei(
-                receipt.gasUsed * receipt.effectiveGasPrice,
-                "ether"
-            )
-
             ts = datetime.utcfromtimestamp(blk.timestamp)
 
-            click.echo(f"Transaction: {tx.hash}")
-            click.echo(f"From: {tx['from']}")
-            click.echo(f"To: {tx.to}")
-            click.echo(f"Value: {value_eth} ETH")
-            click.echo(f"Gas used: {receipt.gasUsed}")
-            click.echo(f"Fee: {gas_fee_eth} ETH")
-            click.echo(f"Status: {'SUCCESS' if receipt.status == 1 else 'REVERTED'}")
-            click.echo(f"Block: {tx.blockNumber}")
-            click.echo(f"Timestamp (UTC): {ts}")
+            lines = format_tx_info(w3, tx, receipt, blk, ts)
+            for line in lines:
+                click.echo(line)
         
     return
 
