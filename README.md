@@ -68,3 +68,18 @@ formatters.py
 Owns
 * format_tx_info(tx_info)
 * format_block_info(block_info)
+
+12/22: I'm going to run my first unit test. 
+This is the new project Structure (Clean & Professional)
+eth_tx_explorer/
+├─ src/
+│  └─ eth_tx_explorer/
+│     ├─ cli.py
+│     ├─ rpc.py
+│     └─ core.py   ← format_tx_info lives here
+│
+├─ tests/
+│  └─ test_core.py
+│
+├─ pyproject.toml  
+├─ requirements.txt
