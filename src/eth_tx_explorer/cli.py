@@ -3,6 +3,16 @@ from datetime import datetime
 from eth_tx_explorer.rpc import get_web3
 import click
 
+from eth_tx_explorer.core import (
+    fetch_block_info,
+    fetch_tx_info,
+)
+
+from eth_tx_explorer.formatters import (
+    format_tx_info,
+)
+
+
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def cli() -> None:
     """eth-tx-explorer: minimal CLI stub."""
@@ -12,6 +22,7 @@ def cli() -> None:
 def hello() -> None:
     """Sanity check command."""
     click.echo("eth-tx-explorer: hello!")
+    
 
 @cli.command()
 @click.argument("tx_hash", required=False)
@@ -30,65 +41,27 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
     w3 = get_web3()
 
     if block is not None:
-        blk = w3.eth.get_block(block)
+        info = fetch_block_info(w3, block)
 
-        ts = datetime.utcfromtimestamp(blk.timestamp)
-
-        click.echo(f"Block: {blk.number}")
-        click.echo(f"Timestamp (UTC): {ts}")
-        click.echo(f"Transaction count: {len(blk.transactions)}")
+        click.echo(f"Block: {info['number']}")
+        click.echo(f"Timestamp (UTC): {info['timestamp']}")
+        click.echo(f"Transaction count: {info['tx_count']}")
 
         return
 
+
     if tx_hash:
-        tx = w3.eth.get_transaction(tx_hash)
-
-        blk = w3.eth.get_block(tx.blockNumber)
+        tx_info = fetch_tx_info(w3, tx_hash)
+        click.echo(format_tx_info(tx_info))
      
-        receipt = w3.eth.get_transaction_receipt(tx_hash)
-        value_eth = w3.from_wei(tx.value, "ether")
-        gas_fee_eth = w3.from_wei(
-            receipt.gasUsed * receipt.effectiveGasPrice,
-            "ether"
-        )
-
-        ts = datetime.utcfromtimestamp(blk.timestamp)
-
-        click.echo(f"Transaction: {tx_hash}")
-        click.echo(f"From: {tx['from']}")
-        click.echo(f"To: {tx.to}")
-        click.echo(f"Value: {value_eth} ETH")
-        click.echo(f"Gas used: {receipt.gasUsed}")
-        click.echo(f"Fee: {gas_fee_eth} ETH")
-        click.echo(f"Status: {'SUCCESS' if receipt.status == 1 else 'REVERTED'}")
-        click.echo(f"Block: {tx.blockNumber}")
-        click.echo(f"Timestamp (UTC): {ts}")
-  
-    elif tx_hash==None:
+    elif tx_hash is None:
         block = w3.eth.get_block("latest", full_transactions=True)
         click.echo(f"Block {block.number} has {len(block.transactions)} txs")
-        for tx in block.transactions:
-            blk = w3.eth.get_block(tx.blockNumber)
-     
-            receipt = w3.eth.get_transaction_receipt(tx.hash)
-            value_eth = w3.from_wei(tx.value, "ether")
-            gas_fee_eth = w3.from_wei(
-                receipt.gasUsed * receipt.effectiveGasPrice,
-                "ether"
-            )
-
-            ts = datetime.utcfromtimestamp(blk.timestamp)
-
-            click.echo(f"Transaction: {tx.hash}")
-            click.echo(f"From: {tx['from']}")
-            click.echo(f"To: {tx.to}")
-            click.echo(f"Value: {value_eth} ETH")
-            click.echo(f"Gas used: {receipt.gasUsed}")
-            click.echo(f"Fee: {gas_fee_eth} ETH")
-            click.echo(f"Status: {'SUCCESS' if receipt.status == 1 else 'REVERTED'}")
-            click.echo(f"Block: {tx.blockNumber}")
-            click.echo(f"Timestamp (UTC): {ts}")
         
+        for tx in block.transactions:
+            tx_info = fetch_tx_info(w3, tx.hash.hex())
+            click.echo(format_tx_info(tx_info))
+            click.echo("-" * 40)       
     return
 
     raise click.UsageError("Provide TX_HASH or --block.")
