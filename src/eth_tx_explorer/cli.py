@@ -12,8 +12,11 @@ from eth_tx_explorer.formatters import (
     format_tx_info,
 )
 
+from eth_tx_explorer import __version__
+
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.version_option(__version__, prog_name="eth-tx-explorer")
 def cli() -> None:
     """eth-tx-explorer: minimal CLI stub."""
     pass
@@ -35,6 +38,8 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
       - Inspect a tx:     inspect 0xabc...
       - Inspect a block:  inspect --block 123456
     """
+    
+    # 1. Mutual exclusion check
     if tx_hash and block is not None:
         raise click.UsageError("Provide either TX_HASH or --block, not both.")
 
@@ -47,10 +52,7 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
         click.echo(f"Timestamp (UTC): {info['timestamp']}")
         click.echo(f"Transaction count: {info['tx_count']}")
 
-        return
-
-
-    if tx_hash:
+    elif tx_hash:
         tx_info = fetch_tx_info(w3, tx_hash)
         click.echo(format_tx_info(tx_info))
      
@@ -62,7 +64,9 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
             tx_info = fetch_tx_info(w3, tx.hash.hex())
             click.echo(format_tx_info(tx_info))
             click.echo("-" * 40)       
-    return
+   
 
     raise click.UsageError("Provide TX_HASH or --block.")
+    
+    return
 
