@@ -13,6 +13,8 @@ Designed as a **learning-grade Ethereum tooling project** that mirrors real open
 - Inspect a transaction by hash
 - Inspect a block by block number
 - Show value, gas usage, fees, status, and timestamp
+- Show raw event logs for a transaction
+- Scan a block and print receipts that contain ERC-20 `Transfer` events
 - Strict input validation with clear error messages
 - Pure unit tests (no Ethereum node required)
 
@@ -37,7 +39,7 @@ cli.py
 - CLI commands and arguments
 - Printing formatted output
 **Must NOT**
-- Call w3.eth.* directly
+- Call w3.eth.* directly (goal; some legacy commands still do this today—see roadmap)
 - Compute gas fees
 - Format Ethereum objects
 
@@ -86,7 +88,7 @@ This installs the `eth-tx-explorer` command into your environment.
 ## Usage
 
 **Sanity check**
-run `eth_tx_explorer hello`
+run `eth-tx-explorer hello`
 
 Expected output:
 ```text
@@ -95,7 +97,7 @@ eth-tx-explorer: hello!
 
 
 **Inspect a transaction by hash**
-run `eth_tx_explorer inspect 0xTRANSACTION_HASH`
+run `eth-tx-explorer inspect 0xTRANSACTION_HASH`
 
 This prints a formatted summary:
 - From / To
@@ -105,7 +107,7 @@ This prints a formatted summary:
 - Block number and timestamp (UTC)
 
 **Inspect a block by number**
-run `eth_tx_explorer inspect --block 19000000`
+run `eth-tx-explorer inspect --block 19000000`
 
 This prints:
 - Block number
@@ -116,6 +118,16 @@ This prints:
 run `eth-tx-explorer inspect`
 
 If you run `inspect` with no arguments, it fetches the latest block (with full transactions) and prints each transaction’s summary:
+
+**Show raw event logs for a transaction**
+run `eth-tx-explorer logs 0xTRANSACTION_HASH`
+
+This prints the receipt’s logs (topics + data) using `print_receipt_logs(receipt)`.
+
+**Scan a block for ERC-20 Transfer logs**
+run `eth-tx-explorer erc20-logs 19000000`
+
+This iterates all transactions in the block, fetches each receipt, and prints the receipt logs only when a log matches the ERC-20 `Transfer(address,address,uint256)` event signature.
 
 
 
@@ -151,5 +163,6 @@ This mirrors how real Ethereum tooling and clients are structured.
 ## Roadmap ~ Next Steps
 - Add `format_block_info`
 - Add unit tests for `core.py` with mocked Web3
+- Refactor CLI commands to avoid direct `w3.eth.*` calls (route through `core.py`)
 - Add JSON output mode (`--json`)
 - Rich console output (tables / colors)
