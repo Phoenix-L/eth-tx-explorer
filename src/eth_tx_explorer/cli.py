@@ -6,6 +6,8 @@ import click
 from eth_tx_explorer.core import (
     fetch_block_info,
     fetch_tx_info,
+    print_erc20_logs,
+    print_receipt_logs,
 )
 
 from eth_tx_explorer.formatters import (
@@ -70,3 +72,37 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
     
     return
 
+@cli.command()
+@click.argument("tx_hash")
+def logs(tx_hash: str) -> None:
+    """
+    Show raw event logs for a transaction.
+
+    Example:
+      eth-tx-explorer logs 0xabc...
+    """
+    if tx_hash is None:
+        raise click.UsageError("Provide TX_HASH.")
+        
+    w3 = get_web3()
+
+    receipt = w3.eth.get_transaction_receipt(tx_hash)
+
+
+    print_receipt_logs(receipt)
+
+
+@cli.command(name="erc20-logs")
+@click.argument("block_number", type=int)
+def erc20_logs(block_number: int) -> None:
+    """
+    Print raw logs for receipts in a block that contain ERC-20 Transfer events.
+
+    Example:
+      eth-tx-explorer erc20-logs 19000000
+    """
+    if block_number is None:
+        raise click.UsageError("Provide BLOCK_NUMBER.")
+
+    w3 = get_web3()
+    print_erc20_logs(w3, block_number)
