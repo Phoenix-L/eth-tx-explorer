@@ -58,19 +58,14 @@ def inspect(tx_hash: str | None, block: int | None) -> None:
         tx_info = fetch_tx_info(w3, tx_hash)
         click.echo(format_tx_info(tx_info))
      
-    elif tx_hash is None:
+    else:
+        # No args: latest block + per-tx summaries
         block = w3.eth.get_block("latest", full_transactions=True)
         click.echo(f"Block {block.number} has {len(block.transactions)} txs")
-        
         for tx in block.transactions:
             tx_info = fetch_tx_info(w3, tx.hash.hex())
             click.echo(format_tx_info(tx_info))
-            click.echo("-" * 40)       
-   
-
-    raise click.UsageError("Provide TX_HASH or --block.")
-    
-    return
+            click.echo("-" * 40)
 
 @cli.command()
 @click.argument("tx_hash")

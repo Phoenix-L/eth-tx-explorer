@@ -3,6 +3,6 @@
 #
 
 click
-dotenv
+python-dotenv
 pytest
 web3

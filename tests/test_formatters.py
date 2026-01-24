@@ -1,5 +1,9 @@
 from datetime import datetime
+
+import pytest
+
 from eth_tx_explorer.formatters import format_tx_info
+
 
 def make_good_tx() -> dict:
     """Helper: returns a valid tx dict with all required fields."""
@@ -33,10 +37,6 @@ def test_format_tx_info_basic():
     assert "Status: SUCCESS" in output
     assert "Block: 12345678" in output
     assert "Timestamp (UTC): 2024-01-01 00:00:00" in output
-
-
-import pytest
-
 
 
 def test_format_tx_info_missing_hash():
