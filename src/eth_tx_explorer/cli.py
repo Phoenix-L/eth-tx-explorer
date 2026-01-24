@@ -106,3 +106,26 @@ def erc20_logs(block_number: int) -> None:
 
     w3 = get_web3()
     print_erc20_logs(w3, block_number)
+
+
+@cli.command()
+def repl() -> None:
+    """
+    Start an interactive Python REPL with eth-tx-explorer helpers pre-loaded.
+
+    Provides: w3, fetch_block_info, fetch_tx_info, format_tx_info,
+    print_receipt_logs, print_erc20_logs.
+
+    Example:
+      eth-tx-explorer repl
+    """
+    import code
+
+    from eth_tx_explorer import repl_helper
+
+    ns = {k: v for k, v in vars(repl_helper).items() if not k.startswith("_")}
+    banner = (
+        "eth-tx-explorer REPL — w3, fetch_block_info, fetch_tx_info, "
+        "format_tx_info, print_receipt_logs, print_erc20_logs available.\n"
+    )
+    code.interact(banner=banner, local=ns)
