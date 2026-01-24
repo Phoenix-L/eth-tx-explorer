@@ -9,6 +9,10 @@ Designed as a **learning-grade Ethereum tooling project** that mirrors real open
 - no RPC calls inside tests
 - production-style layout used by real Ethereum projects
 
+This tool is built with awareness of Ethereum’s resource pricing model, distinguishing between short-term flow costs (execution, bandwidth)
+and long-term stock costs (state growth), as discussed in Vitalik Buterin’s Blockchain Resource Pricing.
+**to be digested and further fine tuned**
+
 ## Features
 - Inspect a transaction by hash
 - Inspect a block by block number

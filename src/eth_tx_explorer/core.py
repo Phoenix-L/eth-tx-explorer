@@ -31,7 +31,7 @@ def fetch_tx_info(w3: Web3, tx_hash: str) -> Dict[str, Any]:
     )
 
     return {
-        "hash": tx_hash,
+        "hash": Web3.to_hex(tx.hash),
         "from": tx["from"],
         "to": tx.to,
         "value_eth": value_eth,
