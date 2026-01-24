@@ -1,6 +1,12 @@
 from datetime import datetime
 from web3 import Web3
+from web3.types import HexBytes
 from typing import Dict, Any
+from eth_utils import keccak, to_bytes
+
+
+# ERC-20 Transfer event signature: Transfer(address,address,uint256)
+TRANSFER_SIG = HexBytes(keccak(to_bytes(text="Transfer(address,address,uint256)")))
 
 
 def fetch_block_info(w3: Web3, block_number: int) -> Dict[str, Any]:
@@ -25,7 +31,7 @@ def fetch_tx_info(w3: Web3, tx_hash: str) -> Dict[str, Any]:
     )
 
     return {
-        "hash": tx_hash,
+        "hash": Web3.to_hex(tx.hash),
         "from": tx["from"],
         "to": tx.to,
         "value_eth": value_eth,
@@ -48,3 +54,57 @@ def format_tx_info(tx: dict) -> str:
         f"Block: {tx['block_number']}\n"
         f"Timestamp (UTC): {tx['timestamp']}"
     )
+
+def print_receipt_logs(receipt) -> None:
+    
+    logs = receipt.logs
+
+    if not logs:
+        print("No logs found.")
+        return
+
+    print(f"{len(logs)} log(s) found:")
+    print("-" * 60)
+
+    for i, log in enumerate(logs):
+        print(f"Log #{i}")
+        print(f"  Address: {log.address}")
+        print(f"  LogIndex: {log.logIndex}")
+
+        print("  Topics:")
+        for topic in log.topics:
+            print(f"    {topic.hex()}")
+
+        print(f"  Data: {log.data.hex()}")
+        print("-" * 60)
+
+
+def print_erc20_logs(w3: Web3, block_number: int) -> None:
+    """
+    Print logs for all transactions in a block that contain ERC-20 Transfer events.
+    
+    Args:
+        w3: Web3 instance connected to Ethereum node
+        block_number: Block number to inspect
+    """
+    # Fetch the block
+    block = w3.eth.get_block(block_number)
+    
+    # Iterate through all transactions in the block
+    for tx_hash in block.transactions:
+        # Fetch the receipt for each transaction
+        receipt = w3.eth.get_transaction_receipt(tx_hash)
+        
+        # Inspect logs in the receipt
+        if receipt.logs:
+            # Check if any log has topics[0] == TRANSFER_SIG
+            has_transfer = False
+            for log in receipt.logs:
+                if log.topics and len(log.topics) > 0:
+                    if log.topics[0] == TRANSFER_SIG:
+                        has_transfer = True
+                        break
+            
+            # If any log matches TRANSFER_SIG, print all logs for this receipt
+            if has_transfer:
+                print_receipt_logs(receipt)
