@@ -1,8 +1,9 @@
+from decimal import Decimal
 from datetime import datetime
 
 import pytest
 
-from eth_tx_explorer.formatters import format_tx_info
+from eth_tx_explorer.formatters import format_tx_info, format_transfer_summary
 
 
 def make_good_tx() -> dict:
@@ -140,3 +141,99 @@ def test_format_tx_info_missing_field():
 
     assert "missing required fields" in str(exc_info.value)
     assert "hash" in str(exc_info.value)
+
+
+class _FakeW3:
+    """Minimal Web3-like object for format_transfer_summary (from_wei only)."""
+
+    @staticmethod
+    def from_wei(value, unit):
+        if unit == "ether":
+            return Decimal(value) / Decimal(10**18)
+        if unit == "gwei":
+            return Decimal(value) / Decimal(10**9)
+        return value
+
+
+def test_format_transfer_summary_eth_simple():
+    record = {
+        "transfer_type": "ETH_SIMPLE_TRANSFER",
+        "tx_hash": "0xabc",
+        "transaction_index": 0,
+        "envelope_type": "EIP-1559",
+        "from_addr": "0xAlice",
+        "to_addr": "0xBob",
+        "eth_value_wei": 1_500_000_000_000_000_000,
+        "token_contract": None,
+        "token_value": None,
+        "gas": 21000,
+        "gasUsed": 21000,
+        "gasPrice": None,
+        "maxFeePerGas": 30_000_000_000,
+        "maxPriorityFeePerGas": 1_000_000_000,
+        "effectiveGasPrice": 25_000_000_000,
+        "tx_type": 2,
+    }
+    out = format_transfer_summary(_FakeW3(), record)
+    assert "TransferType: ETH_SIMPLE_TRANSFER" in out
+    assert "Transaction: 0xabc" in out
+    assert "TransactionIndex: 0" in out
+    assert "EnvelopeType: EIP-1559" in out
+    assert "From: 0xAlice" in out
+    assert "To: 0xBob" in out
+    assert "1.5" in out and "ETH" in out
+    assert "Gas: 21000 limit | 21000 used" in out
+    assert "Effective Price" in out
+
+
+def test_format_transfer_summary_erc20():
+    record = {
+        "transfer_type": "ERC20_TRANSFER",
+        "tx_hash": "0xdef",
+        "transaction_index": 2,
+        "envelope_type": "Legacy",
+        "from_addr": "0xA",
+        "to_addr": "0xB",
+        "eth_value_wei": None,
+        "token_contract": "0xToken",
+        "token_value": 1000000,
+        "gas": 100000,
+        "gasUsed": 65000,
+        "gasPrice": 20_000_000_000,
+        "maxFeePerGas": None,
+        "maxPriorityFeePerGas": None,
+        "effectiveGasPrice": 18_000_000_000,
+        "tx_type": 0,
+    }
+    out = format_transfer_summary(_FakeW3(), record)
+    assert "TransferType: ERC20_TRANSFER" in out
+    assert "TransactionIndex: 2" in out
+    assert "EnvelopeType: Legacy" in out
+    assert "Token Contract: 0xToken" in out
+    assert "Token Amount: 1000000 (raw uint256)" in out
+    assert "Type: Legacy" in out
+
+
+def test_format_transfer_summary_contract_creation():
+    record = {
+        "transfer_type": "CONTRACT_CREATION_WITH_VALUE",
+        "tx_hash": "0x789",
+        "transaction_index": 1,
+        "envelope_type": "EIP-2930",
+        "from_addr": "0xDeployer",
+        "to_addr": "(contract creation)",
+        "eth_value_wei": 50_000_000_000_000_000,
+        "token_contract": None,
+        "token_value": None,
+        "gas": 300000,
+        "gasUsed": 245000,
+        "gasPrice": None,
+        "maxFeePerGas": None,
+        "maxPriorityFeePerGas": None,
+        "effectiveGasPrice": 20_000_000_000,
+        "tx_type": 1,
+    }
+    out = format_transfer_summary(_FakeW3(), record)
+    assert "CONTRACT_CREATION_WITH_VALUE" in out
+    assert "To: (contract creation)" in out
+    assert "0.05" in out and "ETH" in out

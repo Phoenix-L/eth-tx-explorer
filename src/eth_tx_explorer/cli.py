@@ -1,4 +1,5 @@
 # src/eth_tx_explorer/cli.py
+import json
 from datetime import datetime
 from eth_tx_explorer.rpc import get_web3
 import click
@@ -8,10 +9,12 @@ from eth_tx_explorer.core import (
     fetch_tx_info,
     print_erc20_logs,
     print_receipt_logs,
+    process_block_transfers,
 )
 
 from eth_tx_explorer.formatters import (
     format_tx_info,
+    format_transfer_summary,
 )
 
 from eth_tx_explorer import __version__
@@ -124,3 +127,59 @@ def repl() -> None:
         "format_tx_info, print_receipt_logs, print_erc20_logs available.\n"
     )
     code.interact(banner=banner, local=ns)
+
+
+@cli.command(name="block-transfers")
+@click.argument("block_number", type=int)
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+def block_transfers(block_number: int, output_json: bool) -> None:
+    """
+    List all ETH and ERC-20 transfers in a block.
+
+    Transfer types: ETH_SIMPLE_TRANSFER, ETH_CALL_WITH_VALUE,
+    CONTRACT_CREATION_WITH_VALUE, ERC20_TRANSFER.
+    TransactionIndex from tx/receipt/block order (never from enumeration).
+
+    Example:
+      eth-tx-explorer block-transfers 19000000
+    """
+    w3 = get_web3()
+    try:
+        records = process_block_transfers(w3, block_number)
+        if not records:
+            click.echo(f"No transfers found in block {block_number}")
+            return
+        if output_json:
+            out = []
+            for r in records:
+                tc = r.get("token_contract")
+                o = {
+                    "transfer_type": r["transfer_type"],
+                    "tx_hash": r["tx_hash"],
+                    "transaction_index": r["transaction_index"],
+                    "envelope_type": r["envelope_type"],
+                    "from_addr": str(r["from_addr"]) if r.get("from_addr") is not None else None,
+                    "to_addr": str(r["to_addr"]) if r.get("to_addr") is not None else None,
+                    "eth_value_wei": r.get("eth_value_wei"),
+                    "token_contract": str(tc) if tc is not None else None,
+                    "token_value": r.get("token_value"),
+                    "gas": r.get("gas"),
+                    "gasPrice": r.get("gasPrice"),
+                    "maxFeePerGas": r.get("maxFeePerGas"),
+                    "maxPriorityFeePerGas": r.get("maxPriorityFeePerGas"),
+                    "gasUsed": r.get("gasUsed"),
+                    "effectiveGasPrice": r.get("effectiveGasPrice"),
+                    "tx_type": r.get("tx_type"),
+                }
+                out.append(o)
+            click.echo(json.dumps(out, indent=2, default=str))
+        else:
+            click.echo(f"Block {block_number} — {len(records)} transfer(s) found")
+            click.echo("=" * 60)
+            for r in records:
+                click.echo(format_transfer_summary(w3, r))
+                click.echo("-" * 60)
+    except ValueError as e:
+        raise click.UsageError(str(e))
+    except Exception as e:
+        raise click.ClickException(f"Error fetching block: {e}")
